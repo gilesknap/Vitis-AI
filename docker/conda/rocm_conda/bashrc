@@ -1,4 +1,4 @@
-if [[ $EUID -eq 0 ]]; then
+if [[ $EUID -eq 0 && -z $ROOTLESS ]]; then
   echo "Setting up $USER 's environment in the Docker container..."
   if [[ -z "$1" ]]; then
     set -- "bash"

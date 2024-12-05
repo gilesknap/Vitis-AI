@@ -30,7 +30,7 @@ if [[ -z $ROOTLESS ]]; then
   uid=`id -u`
   gid=`id -g`
 else
-  # running in rootless mode - use root inside the container
+  # running in rootless mode - use 'root' inside the container
   user=root
   uid=0
   gid=0
@@ -65,7 +65,7 @@ do
   docker_devices+="--device=$i "
 done
 
-render_driver="$(find /dev/dri -name renderD\* /dev/null)"
+render_driver="$(find /dev/dri -name renderD\* 2> /dev/null)"
 for i in ${render_driver} ;
 do
   docker_devices+="--device=$i "
@@ -102,6 +102,7 @@ docker_run_params=$(cat <<-END
     -w /workspace \
     --rm \
     --network=host \
+    --security-opt label=disable \
     $MOUNTS \
     ${DETACHED} \
     ${RUN_MODE} \
@@ -153,17 +154,26 @@ fi
 touch .confirm
 docker pull $IMAGE_NAME
 if [[ $IMAGE_NAME == *"gpu"* ]]; then
-  docker run \
-    $docker_devices \
-    --gpus all \
-    $docker_run_params
-elif [[ $IMAGE_NAME == *"rocm"* ]]; then
-  docker run \
-    $docker_devices \
-    --group-add=render --group-add video --ipc=host --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
-    $docker_run_params
+  (
+    set -x
+    docker run \
+      $docker_devices \
+      --gpus all \
+      $docker_run_params
+  )
+  elif [[ $IMAGE_NAME == *"rocm"* ]]; then
+  (
+    set -x
+    docker run \
+      $docker_devices \
+      --group-add=render --group-add video --ipc=host --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
+      $docker_run_params
+  )
 else
-  docker run \
+  (
+    set -x
+    docker run \
     $docker_devices \
     $docker_run_params
+  )
 fi
